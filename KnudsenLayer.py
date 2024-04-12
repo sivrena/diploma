@@ -49,8 +49,8 @@ def findParameters(particle_list, stepnumber, z):
         avx[i] += average[0]
         avy[i] += average[1]
         avz[i] += average[2]
-        print('step ' + str(x[i]))
-        print(str(average[0]) + '    ' + str(average[1]) + '    ' + str(average[2]) + '\n\n')
+        # print('step ' + str(x[i]))
+        # print(str(average[0]) + '    ' + str(average[1]) + '    ' + str(average[2]) + '\n\n')
 
     gx.plot(x, avx, label="Average Vel_x")
     gx.legend(loc="upper right")
