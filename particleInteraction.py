@@ -113,8 +113,8 @@ class Particle:
                             particle.position[1] < up and particle.position[1] > dwn and particle.position[2] < Z):
                         self.adsorbate = 2
 
-                    if sum(self.flow_vel) != 0.:
-                        self.flow_vel = Maxwell_reflection(self.flow_vel, particle.position, Z, center)
+                    if sum(self.heat_vel) != 0.:
+                         self.heat_vel_vel = Maxwell_reflection(self.flow_vel, particle.position, Z, center)
 
     def compute_refl(self, step, size):
         # вычисляем скорость частицы после столкновения с границей
@@ -124,11 +124,14 @@ class Particle:
         projz = step * abs(np.dot(v, np.array([0., 0., 1.])))
 
         if (abs(x[0]) - r < projx) or abs(size[0] - x[0]) - r < projx:
-            self.velocity[0] *= -1
+            self.heat_vel[0] *= -1
+            self.flow_vel[0] *= -1
         if abs(x[1]) - r < projy or abs(size[1] - x[1]) - r < projy:
-            self.velocity[1] *= -1
+            self.heat_vel[1] *= -1
+            self.flow_vel[1] *= -1
         if abs(x[2]) - r < projz or abs(size[2] - x[2]) - r < projz:
-            self.velocity[2] *= -1
+            self.heat_vel[2] *= -1
+            self.flow_vel[2] *= -1
 
 # Вычисляем энергию парного взаимодействия с помощью потенциала Леннарда-Джонса
 def LennardJones (particle_list, num):
