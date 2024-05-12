@@ -1,3 +1,5 @@
+#import decimal
+
 from particleInteraction import Particle
 
 import numpy as np
@@ -7,11 +9,11 @@ import json
 
 def getData ():
     parameters = {
-        'AgNumOfAtoms': 0,
-        'AgRadius': 0,
-        'AgMass': 0,
-        'AgEpsilon': 0,
-        'AgSigma': 0,
+        'ArNumOfAtoms': 0,
+        'ArRadius': 0,
+        'ArMass': 0,
+        'ArEpsilon': 0,
+        'ArSigma': 0,
 
         'AlNumOfAtoms': 0,
         'AlRadius': 0,
@@ -37,7 +39,7 @@ def getData ():
             parameters[x[0]] = x[1]
         else:
             parameters[x[0]] = float(x[1])
-    parameters['AgNumOfAtoms'] = int(parameters['AgNumOfAtoms'])
+    parameters['ArNumOfAtoms'] = int(parameters['ArNumOfAtoms'])
     parameters['Steps'] = int(parameters['Steps'])
     parameters['OutputFrequency'] = int(parameters['OutputFrequency'])
 
@@ -91,22 +93,6 @@ def init_list_Al(N, radius, mass, epsilon, sigma, alpha, borders):
             particle_position_z = np.append(particle_position_z, (i + 1) * radius)
             angle += angle_layers[i]
 
-    #Попытка переделать задание той части поверхности, которая "не ямка" (неудачно)
-    # z = particle_position_z[(len(particle_position_z) - 1)]
-    # rr = radius_layers[len(radius_layers) - 1]
-    # rx = borders[0]
-    # ry = borders[1]
-    # coeffx = ceil(borders[0] / 0.3)
-    # coeffy = ceil(borders[1] / 0.3)
-    # numb = coeffx * coeffy
-    # for i in range (numb):
-    #     posx = i % coeffx * 0.3
-    #     posy = i // coeffy * 0.3
-    #     if ((rx - posx) ** 2 + (ry - posy) ** 2 > rr ** 2):
-    #         particle_position_x = np.append(particle_position_x, posx)
-    #         particle_position_y = np.append(particle_position_y, posy)
-    #         particle_position_z = np.append(particle_position_z, z)
-
     z = particle_position_z[(len(particle_position_z) - 1)]
     k = 1.0
     for i in range(len(surface)):
@@ -124,8 +110,7 @@ def init_list_Al(N, radius, mass, epsilon, sigma, alpha, borders):
 
     N += len(particle_position_x)
     for i in range(N):
-        v = np.append(1e-10, 1e-10)
-        v = np.append(v, 1e-10)
+        v = np.array([0., 0., 0.])
         f = np.array([0. for i in range (len(v))])
         a = np.array([0. for i in range(len(v))])
         pos = np.array([particle_position_x[i], particle_position_y[i], particle_position_z[i]])
@@ -134,14 +119,13 @@ def init_list_Al(N, radius, mass, epsilon, sigma, alpha, borders):
         particle_list.append(newparticle)
     return particle_list
 
-def init_list_Ag (N, radius, mass, epsilon, sigma, alpha, borders, z, k, T, flow):
+def init_list_Ar (N, radius, mass, epsilon, sigma, alpha, borders, z, k, T, flow):
     # Случайным образом генерируем массив объектов Particle, число частиц равно N
     # В данной программе рассмотрен трехмерный случай
     particle_list = []
 
     dim = 3
     std_dev = np.sqrt(k * T / mass)
-    velocities = np.random.normal(loc=0, scale=std_dev, size=(N, dim))
 
     for i in range(N):
         # v_mag = np.random.rand(1) * 6
@@ -152,19 +136,24 @@ def init_list_Ag (N, radius, mass, epsilon, sigma, alpha, borders, z, k, T, flow
         f = np.array([0. for i in range (dim)])
         a = np.array([0. for i in range(dim)])
 
+        velx = np.random.normal(loc=0, scale=std_dev)
+        vely = np.random.normal(loc=0, scale=std_dev)
+        velz = np.random.normal(loc=0, scale=std_dev)
+
         collision = True
         while (collision == True):
             collision = False
-            pos = []
-            posx = radius + np.random.rand() * (borders[0] - 2 * radius)
-            posy = radius + np.random.rand() * (borders[1] - 2 * radius)
-            posz = radius + np.random.rand() * (borders[2] - 2 * radius)
-            pos = np.append(pos, posx)
-            pos = np.append(pos, posy)
-            pos = np.append(pos, posz)
-            if pos[2] < z:
-                pos[2] += z
-            newparticle = Particle(mass, radius, epsilon, sigma, pos, velocities[i], f, a, alpha, adsorbate=1)
+            # posx = radius + np.random.rand() * (borders[0] - 2 * radius)
+            # posy = radius + np.random.rand() * (borders[1] - 2 * radius)
+            # posz = radius + np.random.rand() * (borders[2] - 2 * radius)
+            posx = radius + np.random.uniform(low=0., high=4.)
+            posy = radius + np.random.uniform(low=0., high=4.)
+            posz = radius + np.random.uniform(low=(z + 2 * radius), high=4.)
+            pos = np.array([posx, posy, posz])
+            v = np.array([velx, vely, velz])
+            # if pos[2] < z + 2 * radius:
+            #     pos[2] += z + 2 * radius
+            newparticle = Particle(mass, radius, epsilon, sigma, pos, v, f, a, alpha, adsorbate=1)
             newparticle.flow_vel += flow
             for j in range(len(particle_list)):
                 collision = newparticle.check_coll(particle_list[j])
