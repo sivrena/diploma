@@ -1,20 +1,23 @@
-from dataInitialization import getData, init_list_Al, init_list_Ag
+from dataInitialization import getData, init_list_Al, init_list_Ar
 from particleInteraction import solve_step
 from makeDiagrams import graphResults
 from KnudsenLayer import findParameters
+from averageVelocity import findAverageVelocityatPoint
+from distribIntegral import countIntegral
 import Dump
 
 import numpy as np
 from math import pi
 import os
+#from decimal import Decimal
 
 def moleculeData ():
     parameters = getData()
 
     Borders = [parameters['Borders'][0][1], parameters['Borders'][1][1], parameters['Borders'][2][1]]  # границы области
-    tfin = 0.01  # время симуляции
+    tfin = 2e-3# время симуляции
     stepnumber = 200  # число шагов
-    timestep = tfin / stepnumber  # временной шаг
+    timestep = (tfin) / (stepnumber)  # временной шаг
 
     BoltsmanConstant = 1.38 * 10e-23
     temperature = 300  # Кельвины
@@ -26,13 +29,12 @@ def moleculeData ():
     sigma_Al = parameters['AlSigma']
     alpha_Al = parameters['AlAlpha']
 
-    particle_number_Ag = parameters['AgNumOfAtoms']  # число частиц
-    radius_Ag = parameters['AgRadius']  # данные рассматриваемой частицы
-    #mass_Ag = parameters['AgMass']
-    mass_Ag = 1.7911901 * 10e-25
-    epsilon_Ag = parameters['AgEpsilon']
-    sigma_Ag = parameters['AgSigma']
-    alpha_Ag = 0
+    particle_number_Ar = parameters['ArNumOfAtoms']  # число частиц
+    radius_Ar = parameters['ArRadius']  # данные рассматриваемой частицы
+    mass_Ar = parameters['ArMass']
+    epsilon_Ar = parameters['ArEpsilon']
+    sigma_Ar = parameters['ArSigma']
+    alpha_Ar = 0
 
     particle_list_Al = init_list_Al(particle_number_Al, radius_Al, mass_Al, epsilon_Al, sigma_Al, alpha_Al, Borders)
     z = particle_list_Al[len(particle_list_Al) - 1].position[2]
@@ -45,21 +47,21 @@ def moleculeData ():
     Z = z
     volume = Borders[0] * Borders[1] * (Borders[2] - z) + pi * z * z * (R - 1 / 3 * z)
 
-    velFlow = np.array([150., 150., -200.])
-    particle_list_Ag = init_list_Ag(particle_number_Ag, radius_Ag, mass_Ag, epsilon_Ag, sigma_Ag, alpha_Ag,
+    velFlow = np.array([1000., 0., 0.])
+    particle_list_Ar = init_list_Ar(particle_number_Ar, radius_Ar, mass_Ar, epsilon_Ar, sigma_Ar, alpha_Ar,
                                            Borders, z, BoltsmanConstant, temperature, velFlow)
 
     particle_number_Al = len(particle_list_Al)
-    particle_number = particle_number_Ag + particle_number_Al
-    particle_list = np.concatenate([particle_list_Ag, particle_list_Al])
+    particle_number = particle_number_Ar + particle_number_Al
+    particle_list = np.concatenate([particle_list_Ar, particle_list_Al])
 
-    pressure_moment = np.array([0. for i in range(stepnumber)])
-    adsorption_moment = np.array([0. for i in range(stepnumber)])
-    adsorbent_number = 0
-    for i in range(particle_number_Al):
-        if particle_list_Al[i].position[2] < z:
-            adsorbent_number += 1
-    adsorbent_number += round(2 * pi * R / 2 * radius_Al)
+    # pressure_moment = np.array([0. for i in range(stepnumber)])
+    # adsorption_moment = np.array([0. for i in range(stepnumber)])
+    # adsorbent_number = 0
+    # for i in range(particle_number_Al):
+    #     if particle_list_Al[i].position[2] < z:
+    #         adsorbent_number += 1
+    # adsorbent_number += round(2 * pi * R / 2 * radius_Al)
 
     # Вычислительный эксперимент
     OutputFileName = "output.dump"
@@ -76,7 +78,7 @@ def moleculeData ():
                          radius=Radius, pos=Positions, velocity=Velocities, type=Types)
 
         adsorbed_number = 0
-        solve_step(particle_list, particle_number_Ag, particle_number_Al, timestep, Borders, center, R, Z, Borders)
+        solve_step(particle_list, particle_number_Ar, particle_number_Al, timestep, Borders, center, R, Z, velFlow)
 
         # Вычисление центра инерции и момента сил t = start or t = finish
         # if i == 0 or i == stepnumber - 1:
@@ -88,11 +90,13 @@ def moleculeData ():
                     (particle.position[0] - center_x) ** 2 + (particle.position[1] - center_y) ** 2 < R * R:
                 adsorbed_number += 1
 
-        pressure_moment[i] += (particle_number_Ag - adsorbed_number) / (volume * 1e-27) * BoltsmanConstant * temperature
-        adsorption_moment[i] += (adsorbed_number) / (adsorbent_number)
+        # pressure_moment[i] += (particle_number_Ar - adsorbed_number) / (volume * 1e-27) * BoltsmanConstant * temperature
+        # adsorption_moment[i] += (adsorbed_number) / (adsorbent_number)
 
-    findParameters(particle_list[:particle_number_Ag], stepnumber, Z)
-    graphResults(particle_list[:particle_number_Ag], tfin, timestep)
+    findAverageVelocityatPoint(particle_list[:particle_number_Ar], stepnumber, Z)
+    findParameters(particle_list[:particle_number_Ar], stepnumber, Z)
+    graphResults(particle_list[:particle_number_Ar], tfin, timestep)
+    #countIntegral(particle_list[:particle_number_Ar], stepnumber)
 
     #Запись данных, необходимых для построения изотермы адсорбции, в файл
     # result = str(sum(pressure_moment) / stepnumber) + ' ' + str(sum(adsorption_moment) / stepnumber) + ' ' + str(
@@ -104,8 +108,8 @@ def moleculeData ():
 
 
 #рассчет средней длины пробега молекул газа с учетом движения
-def meanFreePath(radius_Ag, particle_number_Ag, volume):
-    free_path = 1. / (np.sqrt(2) * np.pi * np.square(2 * radius_Ag) * (particle_number_Ag / volume))
+def meanFreePath(radius_Ar, particle_number_Ar, volume):
+    free_path = 1. / (np.sqrt(2) * np.pi * np.square(2 * radius_Ar) * (particle_number_Ar / volume))
     print("Длина свободного пробега " + str(free_path))
 
 # рассчет центра инерции
