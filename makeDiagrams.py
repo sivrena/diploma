@@ -5,6 +5,11 @@ from matplotlib.widgets import Slider
 def total_Energy(particle_list, index):
     return sum([particle_list[i].mass / 2. * particle_list[i].solvel_mag[index] ** 2 for i in range(len(particle_list))])
 
+def target_fuction1_f(m, k, T, x):
+    return np.sqrt(m / (2 * np.pi * k * T)) * np.exp(-m * x ** 2 / (2 * T * k))
+def target_fuction2_f(m, k, T, x):
+    return (m / (2 * np.pi * T * k)) ** (3 / 2) * np.exp(-m * x ** 2 / (2 * T * k)) * 4 * np.pi * x * x
+
 def graphResults(particle_list, tfin, timestep):
     fig = plt.figure(figsize=(12, 12))
 
@@ -42,8 +47,8 @@ def graphResults(particle_list, tfin, timestep):
     hist.hist(vel_mod, bins=20, density=True, label="Simulation Data")
     hist.set_xlabel("Speed")
     hist.set_ylabel("Frecuency Density")
-    hist.set_xlim([0, 700])
-    hist.set_ylim([0, 0.01])
+    # hist.set_xlim([0, 1500])
+    # hist.set_ylim([0, 0.01])
 
     # Graph Maxwell–Boltzmann distribution
     E = total_Energy(particle_list, 0)
@@ -51,13 +56,13 @@ def graphResults(particle_list, tfin, timestep):
     k = 1.38064852e-23
     T = 2 * Average_E / (2 * k)
     m = particle_list[0].mass
-    v = np.linspace(0, 700, 1400)
+    v = np.linspace(0, 4000, 4000)
     fv = (m / (2 * np.pi * T * k)) ** (3 / 2) * np.exp(-m * v ** 2 / (2 * T * k)) * 4 * np.pi * v * v
     hist.plot(v, fv, label="Maxwell–Boltzmann distribution")
     hist.legend(loc="upper right")
 
     # Maxwell-Boltsman velocity[i] distribution
-    v_i = np.linspace(-700, 700, 1400)
+    v_i = np.linspace(-3000, 3000, 6000)
     fv_i = np.sqrt(m / (2 * np.pi * k * T)) * np.exp(-m * v_i ** 2 / (2 * T * k))
     hist_x.plot(v_i, fv_i, label="Maxwell–Boltzmann distribution")
     hist_x.legend(loc="upper right")
@@ -122,15 +127,15 @@ def graphResults(particle_list, tfin, timestep):
         k = 1.38064852e-23
         T = 2 * Average_E / (2 * k)
         m = particle_list[0].mass
-        v = np.linspace(0, 700, 1400)
+        v = np.linspace(0, 4000, 4000)
         fv = (m / (2 * np.pi * T * k)) ** (3 / 2) * np.exp(-m * v ** 2 / (2 * T * k)) * 4 * np.pi * v * v
         hist.plot(v, fv, label="Maxwell–Boltzmann distribution")
         hist.legend(loc="upper right")
-        hist.set_xlim([0, 700])
-        hist.set_ylim([0, 0.01])
+        # hist.set_xlim([0, 1500])
+        # hist.set_ylim([0, 0.01])
 
         # Maxwell-Boltsman velocity[i] distribution
-        v_i = np.linspace(-700, 700, 1400)
+        v_i = np.linspace(-3000, 3000, 6000)
         fv_i = np.sqrt(m / (2 * np.pi * k * T)) * np.exp(-m * v_i ** 2 / (2 * T * k))
         hist_x.plot(v_i, fv_i, label="Maxwell–Boltzmann distribution")
         hist_x.legend(loc="upper right")
