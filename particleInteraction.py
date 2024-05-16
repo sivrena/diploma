@@ -1,38 +1,4 @@
 import numpy as np
-from random import random
-from math import asin, sin, cos
-#from decimal import Decimal as D
-
-def diffuse_reflection(particle):
-    phi = 2.0 * np.pi * random()
-    theta = asin(np.sqrt(random()))
-    f = np.array([sin(theta) * cos(phi), sin(theta) * sin(phi), cos(theta)])
-    b = np.array([[1000., 0, 0], [0, 1000., 0], [0, 0, 1000.]])
-    vel = np.dot(b, f)
-
-    return vel
-
-def elasticCollision(v1, v2, m1, m2, di, pos, Z):
-    vel = (v1 - 2. * m2 / (m1 + m2) * np.dot(v1 - v2, di) / (np.linalg.norm(di) ** 2.) * di)
-
-    if (pos[2] == 0 or pos[2] == Z):
-        vel[2] *= -1
-    else:
-        vel[0] *= -1
-        vel[1] *= -1
-
-    return vel
-
-def inelasticCollision(v1, v2, m1, m2, pos, Z):
-    vel = (m1 * v1 + m2 * v2) / (m1 + m2)
-
-    if (pos[2] == 0 or pos[2] == Z):
-        vel[2] *= -1
-    else:
-        vel[0] *= -1
-        vel[1] *= -1
-
-    return vel
 
 # Создаем класс "Particle" для хранения информации о каждой частице из модели (координаты, скорость, ...)
 # Класс "Particle" содержит функцию compute_step для вычисления координат и скорости частицы для следующего шага с
@@ -45,7 +11,7 @@ class Particle:
         self.sigma = sigma #расстояние, на котором энергия взаимодействия становится нулевой
         self.alpha = alpha
 
-        self.adsorbate = adsorbate  #показывает, чем является частица - адсорбент или адсорбтив
+        self.adsorbate = adsorbate  #показывает, чем является частица - газ или твердое тело
 
         # позиция частицы, скорость, ускорение, энергия взаимодействия для данной итерации
         self.position = np.array(position)
@@ -61,19 +27,20 @@ class Particle:
         self.solvel_mag = [np.linalg.norm(np.copy(self.velocity))]
 
     def compute_step(self, step, f, z, flow, borders):
-        # вычисляем позицию и скорость частицы для следующего шага
+        # Вычисляем позицию и скорость частицы для следующего шага
+        # Через потенциалы вычисляем энергию взаимодействия атомов. Из второго закона ньютона находим ускорение частицы
+        # Вычисляем новые координаты частицы методом верле
         self.force = f
         self.acceleration = self.force / (self.mass * 1e26)
         self.position += step * self.velocity + (1 / 2) * self.acceleration * step * step
         self.heat_vel += self.acceleration * step
 
-        if (self.position[2] <= z):
-            self.flow_vel = np.array([0., 0., 0.])
-        elif self.adsorbate:
+        if self.adsorbate:
             self.flow_vel = np.array([flow[0], flow[1], flow[2]])
 
-        self.velocity = self.heat_vel + self.flow_vel[0]
+        self.velocity = self.heat_vel + self.flow_vel
 
+        #Сохраняем скорость, позицию, модуль скорости в массив данных о частице для каждого шага
         self.solpos.append(np.copy(self.position))
         self.solvel.append(np.copy(self.velocity))
         self.solvel_mag.append(np.linalg.norm(np.copy(self.velocity)))
@@ -107,15 +74,12 @@ class Particle:
             if ads1 == ads2 and ads1 == 0:
                 self.heat_vel = np.array([0., 0., 0.])
                 particle.heat_vel = np.array([0., 0., 0.])
+            # столкновение частиц газа друг с другом, вызов функции collide_particle
             elif ads1 == ads2 and ads1 == 1:
-                # rad = x2 - x1
-                # self.heat_vel = (- m2 / (m1 + m2)) * rad
-                # particle.heat_vel = (m1 / (m1 + m2)) * rad
-                self.heat_vel = v1 - (2.) * m2 / (m1 + m2) * np.dot(v1 - v2, di) / (np.linalg.norm(di) ** (2.)) * di
-                particle.heat_vel = v2 - (2.) * m1 / (m2 + m1) * np.dot(v2 - v1, (-di)) / (np.linalg.norm(di) ** (2.)) * (-di)
+                collide_particle(self, particle, 0, step)
+            # столкновение частиц газа с поверхностью, вызов функции collide_particle
             elif ads1:
-                self.heat_vel = - (v1 - (2.) * m2 / (m1 + m2) * np.dot(v1 - v2, di) / (np.linalg.norm(di) ** (2.)) * di)
-                particle.heat_vel = np.array([0., 0., 0.])
+                collide_particle(self, particle, 1, step)
                 rght = center[0] + R
                 lft = center[0] - R
                 up = center[1] + R
@@ -124,28 +88,93 @@ class Particle:
                     self.adsorbate = 2
 
     def compute_refl(self, step, size):
-        # вычисляем скорость частицы после столкновения с границей
-        r, v, x = self.radius, self.velocity, self.position
+        # вычисляем скорость частицы после столкновения с границей ячейки
+        r, v, x, h = self.radius, self.velocity, self.position, self.heat_vel
         projs = np.array([abs(v[0]), abs(v[1]), abs(v[2])])
         projx = step * (projs[0])
         projy = step * (projs[1])
         projz = step * (projs[2])
 
-        v1 = diffuse_reflection(self)
-
         if ((abs(x[0])) - (r) < projx):
-            self.heat_vel[0] = -1. * v1[0]
+            self.heat_vel[0] = -1. * h[0]
         elif abs((size[0]) - (x[0])) - (r) < projx:
-            self.heat_vel[0] = v1[0]
+            self.heat_vel[0] = h[0]
             self.position[0] = self.position[0] - size[0]
         if abs((x[1])) - (r) < projy or abs((size[1]) - (x[1])) - (r) < projy:
-            self.heat_vel[1] = -1. * v1[1]
+            self.heat_vel[1] = -1. * h[1]
         if abs((x[2])) - (r) < projz or abs((size[2]) - (x[2])) - (r) < projz:
-            self.heat_vel[2] = -1 * v1[2]
+            self.heat_vel[2] = -1. * h[2]
 
         self.velocity[0] = (self.heat_vel[0]) + (self.flow_vel[0])
         self.velocity[1] = (self.heat_vel[1]) + (self.flow_vel[1])
         self.velocity[2] = (self.heat_vel[2]) + (self.flow_vel[2])
+
+def collide_particle(particle1, particle2, type, step):
+    #gas-gas
+    if type == 0:
+        sigma = particle1.sigma
+        epsilon = particle1.epsilon
+        x1, x2 = particle1.position, particle2.position
+        m1, m2 = particle1.mass, particle2.mass
+        r1, r2 = particle1.radius, particle2.radius
+        v1, v2 = particle1.velocity, particle2.velocity
+        r = np.linalg.norm(x2 - x1)
+
+        if r < r1 + r2:
+            r = r1 + r2
+
+        # Рассчитываем энергию взаимодействия через потенциал Леннарда-Джонса
+        if r < 2.5 * sigma:
+            force = (48.) * (epsilon) * ((sigma ** 12) / ((r) ** 12) - (sigma ** 6) / ((r) ** 6))
+        else:
+            force = 0.
+
+        # Рассматриваем столкнувшиеся частицы как единое тело, находим закон его движения vel
+        U = - (x1 - x2) * force / r
+        cnst = U * (m1 * 1e26 + m2 * 1e26) / (m1 * 1e26* m2 * 1e26)
+        vel = cnst * step + cnst
+
+        # Из закона движения находим скорости для каждой из столкнувшихся частиц отдельно
+        particle1.heat_vel = (-m2 / (m1 + m2)) * (vel) * 100
+        particle2.heat_vel = (m1 / (m1 + m2)) * (vel) * 100
+
+        v1d = particle1.heat_vel + particle1.flow_vel
+        v2d = particle2.heat_vel + particle2.flow_vel
+
+        # Преобразование полученных скоростей, чтобы выполнялись законы сохранения импульса, энергии, массы
+        sum = [m1 * v1[0] + m2 * v2[0], m1 * v1[1] + m2 * v2[1], m1 * v1[2] + m2 * v2[2]]
+        for i in range (len(v1d)):
+            v1d[i] += sum[i] / 2 / m1
+            v2d[i] += sum[i] / 2 / m2
+
+        particle1.velocity = v1d + particle1.flow_vel
+        particle2.velocity = v2d + particle2.flow_vel
+
+    #gas-surface
+    else:
+        sigma = np.sqrt(particle1.sigma*particle2.sigma)
+        epsilon = np.sqrt(particle1.epsilon*particle2.epsilon)
+        x1, x2 = particle1.position, particle2.position
+        m1, m2 = particle1.mass, particle2.mass
+        r1, r2 = particle1.radius, particle2.radius
+        r = np.linalg.norm(x2 - x1)
+
+        if r < r1 + r2:
+            r = r1 + r2
+
+        if r < 2.5 * sigma:
+            force = (48.) * (epsilon) * ((sigma ** 12) / ((r) ** 12) - (sigma ** 6) / ((r) ** 6))
+        else:
+            force = 0.
+
+        U = - (x1 - x2) * force / r
+        cnst = U * (m1 * 1e26 + m2 * 1e26) / (m1 * 1e26 * m2 * 1e26)
+        vel = cnst * step + cnst
+        particle1.heat_vel = (-m2 / (m1 + m2)) * (vel) * 100.
+        particle2.heat_vel = np.array([0., 0., 0])
+
+        particle1.velocity = particle1.heat_vel + particle1.flow_vel
+        particle2.velocity = particle2.heat_vel + particle2.flow_vel
 
 # Вычисляем энергию парного взаимодействия с помощью потенциала Леннарда-Джонса
 def LennardJones (particle_list, num):
@@ -212,6 +241,7 @@ def solve_step(particle_list, Ar_num, Al_num, step, size, center, R, Z, flow):
             particle_list[i].compute_coll(particle_list[j], step, center, R, Z)
 
     # 2. С помощью метода молекулярной динамики вычисляем позицию и скорость
+    # Предваррительно вычислив энергию взаимодействия всех частиц в системе
     force_M = Morze(particle_list[Ar_num:])
     force_LJ = LennardJones(particle_list, Ar_num)
     forces = np.concatenate([force_LJ, force_M])
