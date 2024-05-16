@@ -1,12 +1,11 @@
-#import decimal
-
 from particleInteraction import Particle
 
 import numpy as np
-from math import pi, sin, cos, ceil
+from math import pi, sin, cos
 from pandas import read_csv
 import json
 
+# Считывание данных, необходимых для моделирования, из файла
 def getData ():
     parameters = {
         'ArNumOfAtoms': 0,
@@ -45,6 +44,7 @@ def getData ():
 
     return parameters
 
+# Моделирование твердой поверхности
 def init_list_Al(N, radius, mass, epsilon, sigma, alpha, borders):
     particle_list = []
     particle_position_x = np.array([])
@@ -128,14 +128,10 @@ def init_list_Ar (N, radius, mass, epsilon, sigma, alpha, borders, z, k, T, flow
     std_dev = np.sqrt(k * T / mass)
 
     for i in range(N):
-        # v_mag = np.random.rand(1) * 6
-        # v_ang = np.random.rand(1) * 2 * np.pi
-        # v_ang_z = np.random.rand(1) * 2 * np.pi
-        # v = np.append(v_mag * np.cos(v_ang), v_mag * np.sin(v_ang))
-        # v = np.append(v, v_mag * np.cos(v_ang_z))
         f = np.array([0. for i in range (dim)])
         a = np.array([0. for i in range(dim)])
 
+        # Генерирование начальных скоростей с помощью распределения Максвелла-Больцмана
         velx = np.random.normal(loc=0, scale=std_dev)
         vely = np.random.normal(loc=0, scale=std_dev)
         velz = np.random.normal(loc=0, scale=std_dev)
@@ -143,16 +139,13 @@ def init_list_Ar (N, radius, mass, epsilon, sigma, alpha, borders, z, k, T, flow
         collision = True
         while (collision == True):
             collision = False
-            # posx = radius + np.random.rand() * (borders[0] - 2 * radius)
-            # posy = radius + np.random.rand() * (borders[1] - 2 * radius)
-            # posz = radius + np.random.rand() * (borders[2] - 2 * radius)
+            # Генерирование позиций частиц газа через равномерное нормальное распределение
             posx = radius + np.random.uniform(low=0., high=4.)
             posy = radius + np.random.uniform(low=0., high=4.)
             posz = radius + np.random.uniform(low=(z + 2 * radius), high=4.)
             pos = np.array([posx, posy, posz])
             v = np.array([velx, vely, velz])
-            # if pos[2] < z + 2 * radius:
-            #     pos[2] += z + 2 * radius
+
             newparticle = Particle(mass, radius, epsilon, sigma, pos, v, f, a, alpha, adsorbate=1)
             newparticle.flow_vel += flow
             for j in range(len(particle_list)):
