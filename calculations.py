@@ -1,7 +1,7 @@
 from dataInitialization import getData, init_list_Al, init_list_Ar
 from particleInteraction import solve_step
 from distributionDiagrams import graphResults
-from averageVelocity import findAverageVelocityatPoint, findVelocityinLayer
+from averageVelocity import findVelocityinLayer
 import Dump
 
 import numpy as np
@@ -13,8 +13,8 @@ def moleculeData ():
     parameters = getData()
 
     Borders = [parameters['Borders'][0][1], parameters['Borders'][1][1], parameters['Borders'][2][1]]  # границы области
-    tfin = 2e-3# время симуляции
-    stepnumber = 200  # число шагов
+    tfin = 3.5e-3# время симуляции
+    stepnumber = 350  # число шагов
     timestep = (tfin) / (stepnumber)  # временной шаг
 
     BoltsmanConstant = 1.38 * 10e-23
@@ -74,7 +74,7 @@ def moleculeData ():
                 adsorbed_number += 1
 
     # Выисление средней скорости в точке
-    findAverageVelocityatPoint(particle_list[:particle_number_Ar], stepnumber, Z)
+    # findAverageVelocityatPoint(particle_list[:particle_number_Ar], stepnumber, Z)
     # Выисление средней скорости на внешней границе
     findVelocityinLayer(particle_list[:particle_number_Ar], stepnumber)
     # Построение распределения молекул газа по скоростям
