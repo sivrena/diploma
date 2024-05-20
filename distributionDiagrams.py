@@ -15,30 +15,41 @@ def graphResults(particle_list, tfin, timestep):
 
     plt.subplots_adjust(bottom=0.2, left=0.15)
 
+    vel_x = np.array([])
+    vel_y = np.array([])
+    vel_z = np.array([])
+    vel_mod = np.array([])
+    for j in range(len(particle_list)):
+        if 3 <= particle_list[j].solpos[0][2] <= 4:
+            vel_x = np.append(vel_x, particle_list[j].solvel[0][0])
+            vel_y = np.append(vel_y, particle_list[j].solvel[0][1])
+            vel_z = np.append(vel_z, particle_list[j].solvel[0][2])
+            vel_mod = np.append(vel_mod, particle_list[j].solvel_mag[0])
+
     # Graph Particles velocity[i] histogram
     dir = 0
     let = 'x'
-    vel_x = [particle_list[i].solvel[0][dir] for i in range(len(particle_list))]
+    #vel_x = [particle_list[i].solvel[0][dir] for i in range(len(particle_list))]
     hist_x.hist(vel_x, bins=20, density=True, label="Simulation Data")
     hist_x.set_xlabel("Vel_" + let)
     hist_x.set_ylabel("Frecuency Density")
 
     dir = 1
     let = 'y'
-    vel_y = [particle_list[i].solvel[0][dir] for i in range(len(particle_list))]
+    #vel_y = [particle_list[i].solvel[0][dir] for i in range(len(particle_list))]
     hist_y.hist(vel_y, bins=20, density=True, label="Simulation Data")
     hist_y.set_xlabel("Vel_" + let)
     hist_y.set_ylabel("Frecuency Density")
 
     dir = 2
     let = 'z'
-    vel_z = [particle_list[i].solvel[0][dir] for i in range(len(particle_list))]
+    #vel_z = [particle_list[i].solvel[0][dir] for i in range(len(particle_list))]
     hist_z.hist(vel_z, bins=20, density=True, label="Simulation Data")
     hist_z.set_xlabel("Vel_" + let)
     hist_z.set_ylabel("Frecuency Density")
 
     # Graph Particles speed histogram
-    vel_mod = [particle_list[i].solvel_mag[0] for i in range(len(particle_list))]
+    #vel_mod = [particle_list[i].solvel_mag[0] for i in range(len(particle_list))]
     hist.hist(vel_mod, bins=20, density=True, label="Simulation Data")
     hist.set_xlabel("Speed")
     hist.set_ylabel("Frecuency Density")
@@ -88,8 +99,19 @@ def graphResults(particle_list, tfin, timestep):
         hist_y.clear()
         hist_z.clear()
 
+        vel_x = np.array([])
+        vel_y = np.array([])
+        vel_z = np.array([])
+        vel_mod = np.array([])
+        for j in range(len(particle_list)):
+            if 3 <= particle_list[j].solpos[0][2] <= 4:
+                vel_x = np.append(vel_x, particle_list[j].solvel[i][0])
+                vel_y = np.append(vel_y, particle_list[j].solvel[i][1])
+                vel_z = np.append(vel_z, particle_list[j].solvel[i][2])
+                vel_mod = np.append(vel_mod, particle_list[j].solvel_mag[i])
+
         # Graph Particles speed histogram
-        vel_mod = [particle_list[j].solvel_mag[i] for j in range(len(particle_list))]
+        #vel_mod = [particle_list[j].solvel_mag[i] for j in range(len(particle_list))]
         hist.hist(vel_mod, bins=20, density=True, label="Simulation Data")
         hist.set_xlabel("Speed")
         hist.set_ylabel("Frecuency Density")
@@ -97,21 +119,21 @@ def graphResults(particle_list, tfin, timestep):
         # Graph Particles velocity[i] histogram
         dir = 0
         let = 'x'
-        vel_x = [particle_list[j].solvel[i][dir] for j in range(len(particle_list))]
+        #vel_x = [particle_list[j].solvel[i][dir] for j in range(len(particle_list))]
         hist_x.hist(vel_x, bins=20, density=True, label="Simulation Data")
         hist_x.set_xlabel("Vel_" + let)
         hist_x.set_ylabel("Frecuency Density")
 
         dir = 1
         let = 'y'
-        vel_y = [particle_list[j].solvel[i][dir] for j in range(len(particle_list))]
+        #vel_y = [particle_list[j].solvel[i][dir] for j in range(len(particle_list))]
         hist_y.hist(vel_y, bins=20, density=True, label="Simulation Data")
         hist_y.set_xlabel("Vel_" + let)
         hist_y.set_ylabel("Frecuency Density")
 
         dir = 2
         let = 'z'
-        vel_z = [particle_list[j].solvel[i][dir] for j in range(len(particle_list))]
+        #vel_z = [particle_list[j].solvel[i][dir] for j in range(len(particle_list))]
         hist_z.hist(vel_z, bins=20, density=True, label="Simulation Data")
         hist_z.set_xlabel("Vel_" + let)
         hist_z.set_ylabel("Frecuency Density")
