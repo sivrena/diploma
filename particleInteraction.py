@@ -30,10 +30,11 @@ class Particle:
         # Вычисляем позицию и скорость частицы для следующего шага
         # Через потенциалы вычисляем энергию взаимодействия атомов. Из второго закона ньютона находим ускорение частицы
         # Вычисляем новые координаты частицы методом верле
+        a = self.acceleration
         self.force = f
         self.acceleration = self.force / (self.mass * 1e26)
         self.position += step * self.velocity + (1 / 2) * self.acceleration * step * step
-        self.heat_vel += self.acceleration * step
+        self.heat_vel += 1 / 2 * (a + self.acceleration) * step
 
         if self.adsorbate:
             self.flow_vel = np.array([flow[0], flow[1], flow[2]])
@@ -88,7 +89,16 @@ class Particle:
                     self.adsorbate = 2
 
     def compute_refl(self, step, size):
-        # вычисляем скорость частицы после столкновения с границей ячейки
+        # Вычисляем скорость частицы после столкновения с границей ячейки
+        # Рассмотриваем систему объема V, состоящую из N частиц
+        # Она находится в контакте с термостатом. Термостат поддерживает постоянную температуру T стенок системы.
+        # Частица при ударе о стенку прилипает к ней, приобретает температуру стенки, а затем отлетает от стенки в произвольном направлении.
+        # Модуль вектора скорости (v) отлетающей частицы уловлетворяет условию mv^2 / 2 = 3 / 2 * kT
+
+        BoltsmanConstant = 1.38 * 10e-23 # k
+        temperature = 300  # T, Кельвины
+        velmod = 3 * BoltsmanConstant * temperature / self.mass
+
         r, v, x, h = self.radius, self.velocity, self.position, self.heat_vel
         projs = np.array([abs(v[0]), abs(v[1]), abs(v[2])])
         projx = step * (projs[0])
@@ -96,14 +106,24 @@ class Particle:
         projz = step * (projs[2])
 
         if ((abs(x[0])) - (r) < projx):
-            self.heat_vel[0] = -1. * h[0]
+            self.heat_vel[0] = np.sqrt(abs(velmod - self.heat_vel[1] ** 2 - self.heat_vel[2] ** 2))
         elif abs((size[0]) - (x[0])) - (r) < projx:
             self.heat_vel[0] = h[0]
             self.position[0] = self.position[0] - size[0]
-        if abs((x[1])) - (r) < projy or abs((size[1]) - (x[1])) - (r) < projy:
-            self.heat_vel[1] = -1. * h[1]
-        if abs((x[2])) - (r) < projz or abs((size[2]) - (x[2])) - (r) < projz:
-            self.heat_vel[2] = -1. * h[2]
+
+        if abs((x[1])) - (r) < projy:
+            self.heat_vel[1] = np.sqrt(abs(velmod - self.heat_vel[0] ** 2 - self.heat_vel[2] ** 2))
+        elif abs((size[1]) - (x[1])) - (r) < projy:
+            self.heat_vel[1] = -1 * np.sqrt(abs(velmod - self.heat_vel[0] ** 2 - self.heat_vel[2] ** 2))
+
+        if abs((x[2])) - (r) < projz:
+            self.heat_vel[2] = np.sqrt(abs(velmod - self.heat_vel[0] ** 2 - self.heat_vel[1] ** 2))
+        elif abs((size[2]) - (x[2])) - (r) < projz:
+            self.heat_vel[2] = -1 * np.sqrt(abs(velmod - self.heat_vel[0] ** 2 - self.heat_vel[1] ** 2))
+
+        a = np.sum(np.square(self.heat_vel))
+        if a != velmod:
+            self.heat_vel *= np.sqrt(velmod/a)
 
         self.velocity[0] = (self.heat_vel[0]) + (self.flow_vel[0])
         self.velocity[1] = (self.heat_vel[1]) + (self.flow_vel[1])
@@ -156,6 +176,7 @@ def collide_particle(particle1, particle2, type, step):
         epsilon = np.sqrt(particle1.epsilon*particle2.epsilon)
         x1, x2 = particle1.position, particle2.position
         m1, m2 = particle1.mass, particle2.mass
+        v1, v2 = particle1.velocity, particle2.velocity
         r1, r2 = particle1.radius, particle2.radius
         r = np.linalg.norm(x2 - x1)
 
@@ -170,10 +191,21 @@ def collide_particle(particle1, particle2, type, step):
         U = - (x1 - x2) * force / r
         cnst = U * (m1 * 1e26 + m2 * 1e26) / (m1 * 1e26 * m2 * 1e26)
         vel = cnst * step + cnst
+
         particle1.heat_vel = (-m2 / (m1 + m2)) * (vel) * 100.
         particle2.heat_vel = np.array([0., 0., 0])
+        imaginaryvel = (m1 / (m1 + m2)) * (vel) * 100.
 
-        particle1.velocity = particle1.heat_vel + particle1.flow_vel
+        v1d = particle1.heat_vel + particle1.flow_vel
+        v2d = imaginaryvel + particle2.flow_vel
+
+        # Преобразование полученных скоростей, чтобы выполнялись законы сохранения импульса, энергии, массы
+        sum = [m1 * v1[0] + m2 * v2[0], m1 * v1[1] + m2 * v2[1], m1 * v1[2] + m2 * v2[2]]
+        for i in range(len(v1d)):
+            v1d[i] += sum[i] / 2 / m1
+            v2d[i] += sum[i] / 2 / m2
+
+        particle1.velocity = v1d + particle1.flow_vel
         particle2.velocity = particle2.heat_vel + particle2.flow_vel
 
 # Вычисляем энергию парного взаимодействия с помощью потенциала Леннарда-Джонса
