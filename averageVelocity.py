@@ -190,11 +190,11 @@ def findVelocityinLayer(particle_list, stepnumber):
             avy[i] += average[1] / ny[i]
             avz[i] += average[2] / nz[i]
 
-        gx.plot(x, avx, label="Av. Vel_x in layer " + str(round(border[m], 2)) + "nm")
+        gx.plot(x, avx, label="Av. Vel_x on the outer border")
         gx.legend(loc="upper right")
-        gy.plot(x, avy, label="Av. Vel_y in layer " + str(round(border[m], 2)) + "nm")
+        gy.plot(x, avy, label="Av. Vel_y on the outer border")
         gy.legend(loc="upper right")
-        gz.plot(x, avz, label="Av. Vel_z in layer " + str(round(border[m], 2)) + "nm")
+        gz.plot(x, avz, label="Av. Vel_z on the outer border")
         gz.legend(loc="upper right")
 
     plt.show()
