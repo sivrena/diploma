@@ -1,1 +1,1 @@
-# interaction of gas with a structural surface
+# Interaction of rarefied gas with a structural surface
