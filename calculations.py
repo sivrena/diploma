@@ -2,6 +2,7 @@ from dataInitialization import getData, init_list_Al, init_list_Ar
 from particleInteraction import solve_step
 from distributionDiagrams import graphResults
 from averageVelocity import findVelocityinLayer
+from interaction import calculateInteraction
 import Dump
 
 import numpy as np
@@ -13,9 +14,9 @@ def moleculeData ():
     parameters = getData()
 
     Borders = [parameters['Borders'][0][1], parameters['Borders'][1][1], parameters['Borders'][2][1]]  # границы области
-    tfin = 3.5e-3# время симуляции
-    stepnumber = 350  # число шагов
-    timestep = (tfin) / (stepnumber)  # временной шаг
+    timestep = 1e-5  # временной шаг
+    stepnumber = 100 # число шагов
+    tfin = timestep * stepnumber # время симуляции
 
     BoltsmanConstant = 1.38 * 10e-23
     temperature = 300  # Кельвины
@@ -40,8 +41,7 @@ def moleculeData ():
     center_y = Borders[1] / 2
     center = [center_x, center_y]
     R = 1.21
-    Z = z
-    volume = Borders[0] * Borders[1] * (Borders[2] - z) + pi * z * z * (R - 1 / 3 * z)
+    z1 = z + 2 * radius_Al * 2
 
     velFlow = np.array([1000., 0., 0.])
     particle_list_Ar = init_list_Ar(particle_number_Ar, radius_Ar, mass_Ar, epsilon_Ar, sigma_Ar, alpha_Ar,
@@ -65,17 +65,13 @@ def moleculeData ():
         Dump.writeOutput(OutputFileName, particle_number, i, Borders,
                          radius=Radius, pos=Positions, velocity=Velocities, type=Types)
 
-        adsorbed_number = 0
-        solve_step(particle_list, particle_number_Ar, particle_number_Al, timestep, Borders, center, R, Z, velFlow)
+        solve_step(particle_list, particle_number_Ar, particle_number_Al, timestep, Borders, center, R, z, z1)
 
-        for particle in particle_list:
-            if particle.adsorbate and particle.position[2] < Z and \
-                    (particle.position[0] - center_x) ** 2 + (particle.position[1] - center_y) ** 2 < R * R:
-                adsorbed_number += 1
-
-    # Выисление средней скорости в точке
-    # findAverageVelocityatPoint(particle_list[:particle_number_Ar], stepnumber, Z)
     # Выисление средней скорости на внешней границе
-    findVelocityinLayer(particle_list[:particle_number_Ar], stepnumber)
+    findVelocityinLayer(particle_list[:particle_number_Ar], stepnumber, z)
+
     # Построение распределения молекул газа по скоростям
-    graphResults(particle_list[:particle_number_Ar], tfin, timestep)
+    # graphResults(particle_list[:particle_number_Ar], tfin, timestep, z)
+
+    # Вычисление силы взаимодействия газа с некоторыми точками поверхности
+    calculateInteraction(particle_list, particle_number_Ar, stepnumber)
