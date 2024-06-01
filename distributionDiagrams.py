@@ -5,7 +5,7 @@ from matplotlib.widgets import Slider
 def total_Energy(particle_list, index):
     return sum([particle_list[i].mass / 2. * particle_list[i].solvel_mag[index] ** 2 for i in range(len(particle_list))])
 
-def graphResults(particle_list, tfin, timestep):
+def graphResults(particle_list, tfin, timestep, z):
     fig = plt.figure(figsize=(12, 12))
 
     hist = fig.add_subplot(2, 2, 1)
@@ -104,7 +104,7 @@ def graphResults(particle_list, tfin, timestep):
         vel_z = np.array([])
         vel_mod = np.array([])
         for j in range(len(particle_list)):
-            if 3 <= particle_list[j].solpos[0][2] <= 4:
+            if 3 <= particle_list[j].solpos[i][2] <= 4:
                 vel_x = np.append(vel_x, particle_list[j].solvel[i][0])
                 vel_y = np.append(vel_y, particle_list[j].solvel[i][1])
                 vel_z = np.append(vel_z, particle_list[j].solvel[i][2])
